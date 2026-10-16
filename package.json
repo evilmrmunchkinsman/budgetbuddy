@@ -1,0 +1,17 @@
+{
+  "name": "budgetbuddy-group2-tools-database",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Standalone SQLite database and deterministic finance tools for BudgetBuddy Group 2",
+  "main": "tools.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "init-db": "node -e \"require('./db').initDatabase(); console.log('BudgetBuddy database initialized.')\""
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.7.0"
+  }
+}
