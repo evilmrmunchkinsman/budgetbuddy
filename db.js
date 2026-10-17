@@ -93,6 +93,14 @@ function insertTransaction(transaction) {
   }
 }
 
+
+function getAllTransactions() {
+  return getDatabase()
+    .prepare('SELECT * FROM transactions ORDER BY transaction_date DESC, id DESC')
+    .all();
+}
+
+
 function getTransactionById(id) {
   return getDatabase()
     .prepare('SELECT * FROM transactions WHERE id = ?')
@@ -171,6 +179,7 @@ module.exports = {
   initDatabase,
   getDatabase,
   insertTransaction,
+  getAllTransactions,
   getTransactionById,
   findTransactionByDedupeKey,
   findPotentialDuplicate,
