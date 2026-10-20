@@ -1,8 +1,13 @@
-// Fake BudgetBuddy server (Group 4 only, for testing your script before the real API exists)
-// Usage: node mockServer.js     then in a second terminal: node testRunner.js
-// Needs Node 18+. No npm install required.
+// Fake BudgetBuddy server (Group 4 only)
+// Usage: node mockServer.js
 const http = require("http");
 const fs = require("fs"); 
+
+// --- TELEGRAM CONFIGURATION ---
+// REPLACE THESE WITH YOUR ACTUAL TOKEN AND CHAT ID
+const TELEGRAM_TOKEN = "8878631468:AAGCVpwtVJyLD-Ui-vItmA5cvnqS0wZeMX0";
+const TELEGRAM_CHAT_ID = "6112795838";
+// ------------------------------
 
 const seen = new Set();
 const totals = {};
@@ -11,6 +16,57 @@ const CATEGORIES = {
   zomato: "Food", swiggy: "Food", uber: "Travel", ola: "Travel",
   reliance: "Shopping", croma: "Shopping", amazon: "Shopping",
 };
+
+// Send Telegram Alert function
+const https = require("https"); // Add this at the very top of the file if not there
+async function sendTelegramAlert(message) {
+  // Strip any accidental spaces from token and chat ID
+  const token = TELEGRAM_TOKEN.trim();
+  const chatId = TELEGRAM_CHAT_ID.trim();
+
+  if (token === "PASTE_YOUR_TOKEN_HERE" || token === "") {
+    console.log("⚠️ Token missing.");
+    return;
+  }
+
+  const postData = JSON.stringify({
+    chat_id: chatId,
+    text: message,
+    parse_mode: "Markdown"
+  });
+
+    const options = {
+    hostname: 'api.telegram.org',
+    port: 443,
+    path: `/bot${token}/sendMessage`,
+    method: 'POST',
+    family: 4, // Force IPv4 (fixes WSL DNS issues)
+    headers: {
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(postData)
+    },
+    rejectUnauthorized: false // Bypass SSL verification (fixes WSL cert issues)
+  };
+
+  const req = https.request(options, (res) => {
+    let data = '';
+    res.on('data', (chunk) => data += chunk);
+    res.on('end', () => {
+      if (res.statusCode === 200) {
+        console.log("📱 Telegram alert sent!");
+      } else {
+        console.log("⚠️ Telegram Error Response:", data);
+      }
+    });
+  });
+
+  req.on('error', (error) => {
+    console.error("❌ Request Error:", error.message);
+  });
+
+  req.write(postData);
+  req.end();
+}
 
 // Very rough stand-in for the real agent: regex + keyword lookup
 function fakeProcess(text) {
@@ -29,10 +85,20 @@ function fakeProcess(text) {
   const large = amount > 20000;
   const overBudget = totals[category] > 5000;
 
+  const isFlagged = duplicate || large;
+  const needsAlert = overBudget || duplicate || large;
+
+  // Trigger Telegram Alert if needed
+  if (needsAlert) {
+    let reason = duplicate ? "Duplicate Charge" : (large ? "Unusually Large Charge" : "Over Budget");
+    let msg = `🚨 *BudgetBuddy Alert*\n\nMerchant: ${merchant}\nAmount: Rs. ${amount}\nReason: ${reason}`;
+    sendTelegramAlert(msg);
+  }
+
   return {
-    transaction: { merchant, amount, date, category, flagged: duplicate || large },
+    transaction: { merchant, amount, date, category, flagged: isFlagged },
     budgetStatus: { overBudget, spent: totals[category], limit: 5000 },
-    alertSent: overBudget || duplicate || large,
+    alertSent: needsAlert,
   };
 }
 
@@ -50,10 +116,9 @@ http.createServer((req, res) => {
         res.end(data);
       }
     });
-    return; // Stop processing further routes
+    return; 
   }
 
-  // Set JSON header for all API routes below this
   res.setHeader("Content-Type", "application/json");
 
   // 2. POST /process-alert
