@@ -1,8 +1,8 @@
 // Fake BudgetBuddy server (Group 4 only, for testing your script before the real API exists)
-// Usage: node mock-server.js     then in a second terminal: node test-runner.js
+// Usage: node mockServer.js     then in a second terminal: node testRunner.js
 // Needs Node 18+. No npm install required.
-
 const http = require("http");
+const fs = require("fs"); 
 
 const seen = new Set();
 const totals = {};
@@ -37,8 +37,26 @@ function fakeProcess(text) {
 }
 
 http.createServer((req, res) => {
+  
+  // 1. Serve the Dashboard HTML
+  if (req.method === "GET" && req.url === "/") {
+    fs.readFile("dashboard.html", (err, data) => {
+      if (err) {
+        res.statusCode = 500;
+        res.setHeader("Content-Type", "text/plain");
+        res.end("Error loading dashboard.html. Did you create it?");
+      } else {
+        res.setHeader("Content-Type", "text/html");
+        res.end(data);
+      }
+    });
+    return; // Stop processing further routes
+  }
+
+  // Set JSON header for all API routes below this
   res.setHeader("Content-Type", "application/json");
 
+  // 2. POST /process-alert
   if (req.method === "POST" && req.url === "/process-alert") {
     let body = "";
     req.on("data", (c) => (body += c));
@@ -51,9 +69,53 @@ http.createServer((req, res) => {
         res.end(JSON.stringify({ error: "bad request" }));
       }
     });
-  } else if (req.method === "GET" && req.url === "/report") {
+  } 
+  // 3. GET /report
+  else if (req.method === "GET" && req.url === "/report") {
     res.end(JSON.stringify({ spendByCategory: totals }));
-  } else {
+  } 
+  // 4. GET /transactions
+  else if (req.method === "GET" && req.url === "/transactions") {
+    res.end(JSON.stringify([
+      { id: 1, merchant: "ZOMATO", amount: 450, date: "12-Aug-25", category: "Food", flagged: false },
+      { id: 2, merchant: "UBER", amount: 899, date: "12-Aug-25", category: "Travel", flagged: false },
+      { id: 3, merchant: "RELIANCE TRENDS", amount: 2400, date: "12-Aug-25", category: "Shopping", flagged: false },
+      { id: 4, merchant: "ZOMATO", amount: 450, date: "12-Aug-25", category: "Food", flagged: true },
+      { id: 5, merchant: "CROMA ELECTRONICS", amount: 48000, date: "12-Aug-25", category: "Shopping", flagged: true }
+    ]));
+  } 
+  // 5. GET /summary
+  else if (req.method === "GET" && req.url === "/summary") {
+    res.end(JSON.stringify({
+      totalSpent: 52199,
+      spendByCategory: {
+        "Food": 900,
+        "Travel": 899,
+        "Shopping": 50400
+      },
+      budgets: {
+        "Food": 4000,
+        "Travel": 2000,
+        "Shopping": 10000
+      }
+    }));
+  } 
+  // 6. PUT /budgets
+  else if (req.method === "PUT" && req.url === "/budgets") {
+    let body = "";
+    req.on("data", (c) => (body += c));
+    req.on("end", () => {
+      try {
+        const { category, limit } = JSON.parse(body);
+        res.end(JSON.stringify({ success: true, message: `Budget for ${category} updated to ${limit}` }));
+      } catch {
+        res.statusCode = 400;
+        res.end(JSON.stringify({ error: "bad request" }));
+      }
+    });
+  } 
+  // 7. Catch-all for 404
+  else {
     res.statusCode = 404;
     res.end(JSON.stringify({ error: "not found" }));
   }
