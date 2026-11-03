@@ -93,8 +93,12 @@ module.exports = {
     };
   },
 
-  saveTransaction: (data) => {
-    const payload = { ...data, transactionDate: data.date, rawAlertText: data.rawAlertText || 'manual' };
+   saveTransaction: (data) => {
+    const payload = { 
+      ...data, 
+      transactionDate: data.date, 
+      rawAlertText: data.rawText // Use the real text instead of 'manual'
+    };
     const res = tools.saveTransaction(payload);
     if (!res.ok) throw new Error(res.error.message);
     return { id: res.transaction.id };

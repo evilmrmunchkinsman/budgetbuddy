@@ -34,6 +34,8 @@ function createApp({ config = defaultConfig, logger = console } = {}) {
   const app = express();
   app.disable('x-powered-by');
   app.use(express.json({ limit: '16kb' }));
+  app.use(express.static(__dirname));
+  app.get('/', (req, res) => res.sendFile(__dirname + '/dashboard.html'));
 
   app.get('/health', (req, res) => {
     res.json({ status: 'ok', mode: 'live' });
@@ -72,6 +74,20 @@ function createApp({ config = defaultConfig, logger = console } = {}) {
     res.send("Gmail connected. You can close this tab.");
   }));
 
+
+  app.get('/transactions', asyncHandler(async (req, res) => {
+    try {
+      const db = require('./db');
+      // Assuming Group 2's db exports a function to get all rows. 
+      // If this errors, check db.js for the correct name.
+      const transactions = db.getAllTransactions ? db.getAllTransactions() : [];
+      res.json(transactions);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  }));
+
+  
   // ERROR HANDLERS
   app.use((req, res, next) => {
     next(new AppError(404, 'NOT_FOUND', `No route for ${req.method} ${req.path}`));

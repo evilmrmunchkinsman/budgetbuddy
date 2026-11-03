@@ -65,24 +65,25 @@ const toolsSchema = [
       }
     }
   },
-  {
-    type: "function",
-    function: {
-      name: "saveTransaction",
-      description: "Saves a transaction to the database.",
-      parameters: {
-        type: "object",
-        properties: { 
-          merchant: { type: "string" }, 
-          amount: { type: "number" }, 
-          date: { type: "string" }, 
-          category: { type: "string" }, 
-          flagged: { type: "boolean" } 
-        },
-        required: ["merchant", "amount", "date", "category", "flagged"]
+      {
+      type: "function",
+      function: {
+        name: "saveTransaction",
+        description: "Saves a transaction to the database.",
+        parameters: {
+          type: "object",
+          properties: { 
+            merchant: { type: "string" }, 
+            amount: { type: "number" }, 
+            date: { type: "string" }, 
+            category: { type: "string" }, 
+            flagged: { type: "boolean" },
+            rawText: { type: "string", description: "The original unmodified alert text." } // ADD THIS
+          },
+          required: ["merchant", "amount", "date", "category", "flagged", "rawText"] // ADD rawText
+        }
       }
-    }
-  },
+    },
   {
     type: "function",
     function: {
@@ -105,7 +106,8 @@ Process raw bank/UPI alert text step-by-step:
 4. flagAnomaly.
 5. saveTransaction. 
    CRITICAL: You must ALWAYS format the "date" field as YYYY-MM-DD. 
-   For example, "12-Aug-25" must become "2025-08-12".
+   For example, if the text says "12-Aug-25", you must pass "2025-08-12" to the tools.
+   You MUST pass the exact original text into the "rawText" field.
 6. If budget exceeded OR flagged, sendAlert.
 7. Return a final text summary.`;
 
