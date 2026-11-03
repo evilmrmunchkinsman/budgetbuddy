@@ -62,24 +62,57 @@
 </div>
 
 <script>
-    // Fetch data from our mock API
     async function loadDashboard() {
         try {
-            // 1. Fetch Summary Data
-            const summaryRes = await fetch('/summary');
-            const summary = await summaryRes.json();
+            // Fetch raw transactions directly from the DB
+            const res = await fetch('/transactions');
+            const transactions = await res.json();
 
-            document.getElementById('totalSpent').innerText = `Rs. ${summary.totalSpent.toLocaleString()}`;
+            let totalSpent = 0;
+            let flaggedCount = 0;
+            const categoryTotals = {};
 
-            // 2. Render Chart
+            const tableBody = document.getElementById('transactionTable');
+            tableBody.innerHTML = ''; // Clear loading state
+
+            if (transactions.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">No transactions found. Run testRunner.js!</td></tr>`;
+            }
+
+            transactions.forEach(t => {
+                // 1. Calculate Totals
+                totalSpent += t.amount;
+                if (t.flagged) flaggedCount++;
+                
+                // 2. Group by Category for the Chart
+                categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
+
+                // 3. Render Table Row
+                const dateStr = t.transactionDate || t.date || 'N/A';
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${dateStr}</td>
+                    <td>${t.merchant}</td>
+                    <td>${t.category}</td>
+                    <td>Rs. ${t.amount.toLocaleString()}</td>
+                    <td class="${t.flagged ? 'flagged' : ''}">${t.flagged ? '⚠️ Flagged' : 'Normal'}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            // 4. Update Summary Cards
+            document.getElementById('totalSpent').innerText = `Rs. ${totalSpent.toLocaleString()}`;
+            document.getElementById('flaggedCount').innerText = flaggedCount;
+
+            // 5. Render Chart
             const ctx = document.getElementById('spendChart').getContext('2d');
             new Chart(ctx, {
                 type: 'pie',
                 data: {
-                    labels: Object.keys(summary.spendByCategory),
+                    labels: Object.keys(categoryTotals),
                     datasets: [{
-                        data: Object.values(summary.spendByCategory),
-                        backgroundColor: ['#e74c3c', '#3498db', '#f1c40f', '#2ecc71'],
+                        data: Object.values(categoryTotals),
+                        backgroundColor: ['#e74c3c', '#3498db', '#f1c40f', '#2ecc71', '#9b59b6'],
                     }]
                 },
                 options: {
@@ -90,35 +123,12 @@
                 }
             });
 
-            // 3. Fetch Transactions
-            const transRes = await fetch('/transactions');
-            const transactions = await transRes.json();
-
-            let flaggedCount = 0;
-            const tableBody = document.getElementById('transactionTable');
-            
-            transactions.forEach(t => {
-                if (t.flagged) flaggedCount++;
-                
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${t.date}</td>
-                    <td>${t.merchant}</td>
-                    <td>${t.category}</td>
-                    <td>Rs. ${t.amount.toLocaleString()}</td>
-                    <td class="${t.flagged ? 'flagged' : ''}">${t.flagged ? '⚠️ Flagged' : 'Normal'}</td>
-                `;
-                tableBody.appendChild(row);
-            });
-
-            document.getElementById('flaggedCount').innerText = flaggedCount;
-
         } catch (error) {
             console.error("Error loading dashboard:", error);
+            document.getElementById('transactionTable').innerHTML = `<tr><td colspan="5" style="color:red;">Failed to load data. Check console.</td></tr>`;
         }
     }
 
-    // Run when the page loads
     loadDashboard();
 </script>
 
