@@ -5,8 +5,7 @@ const fs = require("fs");
 
 // --- TELEGRAM CONFIGURATION ---
 // REPLACE THESE WITH YOUR ACTUAL TOKEN AND CHAT ID
-const TELEGRAM_TOKEN = "8878631468:AAGCVpwtVJyLD-Ui-vItmA5cvnqS0wZeMX0";
-const TELEGRAM_CHAT_ID = "6112795838";
+
 // ------------------------------
 
 const seen = new Set();
