@@ -34,6 +34,8 @@ function createApp({ config = defaultConfig, logger = console } = {}) {
   const app = express();
   app.disable('x-powered-by');
   app.use(express.json({ limit: '16kb' }));
+  app.use(express.static(__dirname));
+  app.get('/', (req, res) => res.sendFile(__dirname + '/dashboard.html'));
 
   app.get('/health', (req, res) => {
     res.json({ status: 'ok', mode: 'live' });
