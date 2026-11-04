@@ -15,8 +15,8 @@ async function sendTelegramAlert(message) {
 
   const postData = JSON.stringify({
     chat_id: TELEGRAM_CHAT_ID.trim(),
-    text: message,
-    parse_mode: "Markdown"
+    text: message
+    // parse_mode removed to fix "can't parse entities" error
   });
 
   const options = {
@@ -93,7 +93,7 @@ module.exports = {
     };
   },
 
-   saveTransaction: (data) => {
+  saveTransaction: (data) => {
     const payload = { 
       ...data, 
       transactionDate: data.date, 

@@ -64,7 +64,6 @@
 <script>
     async function loadDashboard() {
         try {
-            // Fetch raw transactions directly from the DB
             const res = await fetch('/transactions');
             const transactions = await res.json();
 
@@ -73,38 +72,39 @@
             const categoryTotals = {};
 
             const tableBody = document.getElementById('transactionTable');
-            tableBody.innerHTML = ''; // Clear loading state
+            tableBody.innerHTML = ''; 
 
             if (transactions.length === 0) {
                 tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">No transactions found. Run testRunner.js!</td></tr>`;
             }
 
             transactions.forEach(t => {
-                // 1. Calculate Totals
-                totalSpent += t.amount;
-                if (t.flagged) flaggedCount++;
+                // FIX 1: Check for both 'transactionDate' and 'transaction_date'
+                const dateStr = t.transactionDate || t.transaction_date || t.date || 'N/A';
                 
-                // 2. Group by Category for the Chart
-                categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
+                // FIX 2: Calculate flags manually since DB doesn't save the boolean
+                const isDuplicate = transactions.filter(other => other.merchant === t.merchant && other.amount === t.amount).length > 1;
+                const isLarge = t.amount > 10000;
+                const isFlagged = t.flagged || isDuplicate || isLarge;
 
-                // 3. Render Table Row
-                const dateStr = t.transactionDate || t.date || 'N/A';
+                if (isFlagged) flaggedCount++;
+                categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
+                totalSpent += t.amount;
+
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${dateStr}</td>
                     <td>${t.merchant}</td>
                     <td>${t.category}</td>
                     <td>Rs. ${t.amount.toLocaleString()}</td>
-                    <td class="${t.flagged ? 'flagged' : ''}">${t.flagged ? '⚠️ Flagged' : 'Normal'}</td>
+                    <td class="${isFlagged ? 'flagged' : ''}">${isFlagged ? '⚠️ Flagged' : 'Normal'}</td>
                 `;
                 tableBody.appendChild(row);
             });
 
-            // 4. Update Summary Cards
             document.getElementById('totalSpent').innerText = `Rs. ${totalSpent.toLocaleString()}`;
             document.getElementById('flaggedCount').innerText = flaggedCount;
 
-            // 5. Render Chart
             const ctx = document.getElementById('spendChart').getContext('2d');
             new Chart(ctx, {
                 type: 'pie',
@@ -115,22 +115,13 @@
                         backgroundColor: ['#e74c3c', '#3498db', '#f1c40f', '#2ecc71', '#9b59b6'],
                     }]
                 },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        title: { display: true, text: 'Spending by Category', font: { size: 16 } }
-                    }
-                }
+                options: { responsive: true, plugins: { title: { display: true, text: 'Spending by Category', font: { size: 16 } } } }
             });
-
         } catch (error) {
             console.error("Error loading dashboard:", error);
-            document.getElementById('transactionTable').innerHTML = `<tr><td colspan="5" style="color:red;">Failed to load data. Check console.</td></tr>`;
         }
     }
-
     loadDashboard();
 </script>
-
 </body>
 </html>
